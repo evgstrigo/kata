@@ -3,8 +3,12 @@ package jm.task.core.jdbc.util;
 import jm.task.core.jdbc.model.User;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.cfg.Environment;
 import org.hibernate.service.ServiceRegistry;
 
 import java.io.FileReader;
@@ -12,6 +16,8 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class Util {
@@ -48,21 +54,36 @@ public class Util {
 
 
     // Connect to MySQL by HIBERNATE
-    private static SessionFactory getSessionFactory() throws IOException {
-        Properties properties = new Properties();
-        properties.load(new FileReader(
-                "C:\\Users\\sev\\IdeaProjects\\kata\\src\\main\\resources\\myHibernate.properties"));
+    private static StandardServiceRegistry standardServiceRegistry;
+    private static SessionFactory sessionFactory;
 
-        Configuration conf = new Configuration().setProperties(properties).addAnnotatedClass(User.class);
-        ServiceRegistry sr = new StandardServiceRegistryBuilder().applySettings(conf.getProperties()).build();
-        SessionFactory sf = conf.buildSessionFactory(sr);
-        return sf;
+
+    static {
+        StandardServiceRegistryBuilder registryBuilder = new StandardServiceRegistryBuilder();
+        Map<String, String> dbSettings = new HashMap<>();
+        dbSettings.put(Environment.URL, "jdbc:mysql://localhost:3306/kata_db");
+        dbSettings.put(Environment.USER, "root");
+        dbSettings.put(Environment.PASS, "123456");
+        dbSettings.put(Environment.DRIVER, "com.mysql.cj.jdbc.Driver");
+        dbSettings.put(Environment.DIALECT, "org.hibernate.dialect.MySQLDialect");
+        dbSettings.put(Environment.AUTOCOMMIT, "true");
+        dbSettings.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
+
+        registryBuilder.applySettings(dbSettings);
+
+        standardServiceRegistry = registryBuilder.build();
+        MetadataSources sources = new MetadataSources(standardServiceRegistry);
+        Metadata metadata = sources
+                .addAnnotatedClass(User.class)
+                .getMetadataBuilder().build();
+        sessionFactory = metadata.getSessionFactoryBuilder().build();
+
     }
 
-
-    public static Session getSession() throws IOException {
-        return getSessionFactory().openSession();
+    public static SessionFactory getSessionFactory() {
+        return sessionFactory;
     }
+
 
 
 
